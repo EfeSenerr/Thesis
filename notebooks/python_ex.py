@@ -10,8 +10,6 @@ import concurrent.futures
 import os
 import re
 
-warnings.filterwarnings(action='ignore', category=FutureWarning)
-logging.basicConfig(filename='processing.log', level=logging.INFO)
 
 # data_name = 'streamV2_tweetnet_2023-06'
 
@@ -126,11 +124,11 @@ def custom_write_csv(df: pd.DataFrame, output_path: str, data_name: str):
 
 # Define a function to process a chunk of data
 def process_chunk(df_chunk: pd.DataFrame, output_path: str, data_name: str):
-    logging.info(f'Processing chunk entered')
+    # logging.info(f'Processing chunk entered')
     results = []
     for idx, row in df_chunk.iterrows():
         row_dict = row.to_dict()
-        logging.info(f'Processing tweet id: {row_dict["tweet_id"]}')
+        # logging.info(f'Processing tweet id: {row_dict["tweet_id"]}')
         api_response = fetch_additional_info(row_dict['tweet_id'])
         additional_info = parse_api_response(api_response)
         row_dict.update(additional_info)
@@ -151,6 +149,7 @@ def process_data_in_parallel(df, output_path: str, data_name: str):
 
 
 def process_file(file_path, output_path):
+    logging.info(f'Processing file path: {file_path}')
     # Extract data_name from the file path
     data_name = os.path.basename(file_path).replace('.jsons', '')
     df = pd.read_json(file_path, lines=True)
@@ -173,8 +172,20 @@ def process_all_files_in_folder(folder_path, output_folder_path):
             logging.info(f'Processing file: {file_name}')
             process_file(file_path, output_folder_path)
 if __name__ == "__main__":
-    input_folder_path = './test_Folder'
-    output_folder_path = '../data/output/test_Folder'
+    warnings.filterwarnings(action='ignore', category=FutureWarning)
+    
+    # Configure logging to write to a file and the console
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(filename='processing.log'),
+            logging.StreamHandler()
+        ]
+    )
+    
+    input_folder_path = './streamV2_tweetnet_2023-06_splitted'
+    output_folder_path = '../data/output/streamV2_tweetnet_2023-06_splitted'
     os.makedirs(output_folder_path, exist_ok=True)  # Create output folder if it doesn't exist
     process_all_files_in_folder(input_folder_path, output_folder_path)
     
