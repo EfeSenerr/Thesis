@@ -1,10 +1,6 @@
 # New
 data/
-notebooks/streamV2_tweetnet_2023-03_splitted
-notebooks/streamV2_tweetnet_2023-04_splitted
-notebooks/streamV2_tweetnet_2023-05_splitted
-notebooks/streamV2_tweetnet_2023-06_splitted
-
+*.jsons
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
