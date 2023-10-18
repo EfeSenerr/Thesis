@@ -10,12 +10,6 @@ import concurrent.futures
 import os
 import re
 
-
-# data_name = 'streamV2_tweetnet_2023-06'
-
-# # Read the JSONL file
-# df = pd.read_json(f'../data/{data_name}.jsons', lines=True)
-
 # Define the transformation function
 def extract_fields(json_obj):
     tweet_id = json_obj.get('tweet_id', '')
@@ -59,7 +53,7 @@ def fetch_additional_info(tweet_id):
         return None
     return response.text
 
-
+# Extract the additional info from API response
 def parse_api_response(api_response):
     if not api_response:
         return {}
@@ -83,37 +77,7 @@ def parse_api_response(api_response):
         'parent_tweet_id': parent_tweet_id
     }
 
-
-def write_row_to_csv(row):
-    try:
-        with open('output_{data_name}.csv', 'a', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=['tweet_id', 'tweet_type', 'hashtags', 'mentions', 'lang', 'favorite_count', 'created_at', 'text', 'parent_tweet_id'])
-            writer.writerow(row)
-    except Exception as e:
-        logging.error(f'Failed: write_row_to_csv. Error: {e}')
-
-
-# Function to process a single JSON object (this includes the API call)
-def process_json_object(json_obj):
-    try: 
-        # Extract initial fields
-        row = extract_fields(json_obj)
-        
-        # Fetch additional info from API (You'll have to add your API logic)
-        api_response = fetch_additional_info(row['tweet_id'])
-        
-        # Parse the API response
-        additional_info = parse_api_response(api_response)
-        
-        # Merge initial data and additional info
-        row.update(additional_info)
-        
-        # Write the row to CSV
-        write_row_to_csv(row)
-    except Exception as e:
-        logging.error(f'Failed: process_json_object. Error: {e}')
-
-
+# Last function in the process, which converts dataframe to csv file
 def custom_write_csv(df: pd.DataFrame, output_path: str, data_name: str):
     file_name = os.path.join(output_path, f'output_{data_name}.csv')
     try:
@@ -122,32 +86,34 @@ def custom_write_csv(df: pd.DataFrame, output_path: str, data_name: str):
         logging.error(f'Failed to write chunk {e}')
         
 
-# Define a function to process a chunk of data
+# Processes a chunk of data. The function is used in process_data_in_parallel, which chunks the given df into 10 chunks
 def process_chunk(df_chunk: pd.DataFrame, output_path: str, data_name: str):
-    # logging.info(f'Processing chunk entered')
     results = []
     for idx, row in df_chunk.iterrows():
         row_dict = row.to_dict()
-        # logging.info(f'Processing tweet id: {row_dict["tweet_id"]}')
         api_response = fetch_additional_info(row_dict['tweet_id'])
         additional_info = parse_api_response(api_response)
         row_dict.update(additional_info)
+
         # Convert hashtags and mentions array to a comma-separated string
         row_dict['hashtags'] = ','.join(row_dict['hashtags']) if isinstance(row_dict['hashtags'], (list, tuple)) else ''
         row_dict['mentions'] = ','.join(row_dict['mentions']) if isinstance(row_dict['mentions'], (list, tuple)) else ''
+        
         results.append(row_dict)
+    
     result_df = pd.DataFrame(results)
     # Filter the DataFrame to only include the columns specified in the schema
     result_df = result_df[['tweet_id', 'tweet_type', 'hashtags', 'mentions', 'lang', 'favorite_count', 'created_at', 'text', 'parent_tweet_id']]
     custom_write_csv(result_df, output_path, data_name)  # Pass output_path and data_name to custom_write_csv
 
+# Used for parallel processing, main function here is process_chunk
 def process_data_in_parallel(df, output_path: str, data_name: str):
     with concurrent.futures.ThreadPoolExecutor() as executor:
         chunks = np.array_split(df, 10)
         # Use a lambda function to pass the output_path and data_name arguments to process_chunk
         executor.map(lambda chunk: process_chunk(chunk, output_path, data_name), chunks)
 
-
+# processes a file, which is written for .jsons, calls process_data_in_parallel
 def process_file(file_path, output_path):
     logging.info(f'Processing file path: {file_path}')
     # Extract data_name from the file path
@@ -165,12 +131,14 @@ def process_file(file_path, output_path):
     # Process each chunk in parallel
     process_data_in_parallel(df, output_path, data_name)
 
+# Processes all the files in the folder, calls process_file
 def process_all_files_in_folder(folder_path, output_folder_path):
     for file_name in os.listdir(folder_path):
         if file_name.endswith('.jsons'):
             file_path = os.path.join(folder_path, file_name)
             logging.info(f'Processing file: {file_name}')
             process_file(file_path, output_folder_path)
+
 if __name__ == "__main__":
     warnings.filterwarnings(action='ignore', category=FutureWarning)
     
@@ -186,6 +154,8 @@ if __name__ == "__main__":
     
     input_folder_path = './streamV2_tweetnet_2023-06_splitted'
     output_folder_path = '../data/output/streamV2_tweetnet_2023-06_splitted'
-    os.makedirs(output_folder_path, exist_ok=True)  # Create output folder if it doesn't exist
+    
+    # Create output folder if it doesn't exist
+    os.makedirs(output_folder_path, exist_ok=True)  
     process_all_files_in_folder(input_folder_path, output_folder_path)
     
