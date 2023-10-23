@@ -14,8 +14,11 @@ def split_file(file_path, lines_per_file, output_path):
         with open(small_file_path, 'w') as small_file:
             small_file.writelines(lines[i:i + lines_per_file])
 
+input_file = "../data/stream_tweetids_2022-07.txt"
+output_path = "../data/stream_tweetids_2022-07"
+
 # Ensure the output directory exists
-os.makedirs('../data/streamV2_tweetids_2023-03', exist_ok=True)
+os.makedirs(output_path, exist_ok=True)
 
 # Call the function
-split_file('../data/streamV2_tweetids_2023-03.txt', 100000, '../data/streamV2_tweetids_2023-03')
+split_file(input_file, 10000, output_path)

@@ -102,19 +102,25 @@ def process_chunk(df_chunk: pd.DataFrame, output_path: str, data_name: str):
 
     for idx, row in df_chunk.iterrows():
         row_dict = row.to_dict()
-        api_response = fetch_additional_info(row_dict['tweet_id'])
-        additional_info = parse_api_response(api_response)
-        row_dict.update(additional_info)
+        try:
+            api_response = fetch_additional_info(row_dict['tweet_id'])
+            additional_info = parse_api_response(api_response)
+            row_dict.update(additional_info)
+        except Exception as e: 
+            logging.error(f'Failed to process chunk {e}')
 
         # Convert hashtags and mentions array to a comma-separated string
-        row_dict['hashtags'] = ','.join(row_dict['hashtags']) if isinstance(row_dict['hashtags'], (list, tuple)) else ''
-        row_dict['mentions'] = ','.join(row_dict['mentions']) if isinstance(row_dict['mentions'], (list, tuple)) else ''
-        
+        #row_dict['hashtags'] = ','.join(row_dict['hashtags']) if isinstance(row_dict['hashtags'], (list, tuple)) else ''
+        #row_dict['mentions'] = ','.join(row_dict['mentions']) if isinstance(row_dict['mentions'], (list, tuple)) else ''
         results.append(row_dict)
-    
+        #print(f"results inside: {results}")
+    #print(f"Results after everything: {results}")
     result_df = pd.DataFrame(results)
+    #print(f"Result_df: {result_df}")
+    
     # Filter the DataFrame to only include the columns specified in the schema
     #result_df = result_df[['tweet_id', 'tweet_type', 'hashtags', 'mentions', 'lang', 'favorite_count', 'created_at', 'text', 'parent_tweet_id', 'entities']]
+    
     custom_write_csv(result_df, output_path, data_name)  # Pass output_path and data_name to custom_write_csv
 
 # Used for parallel processing, main function here is process_chunk
@@ -167,10 +173,10 @@ if __name__ == "__main__":
     )
     
     input_folder_path = '../data/streamV2_tweetids_2023-06'
-    output_folder_path = '../data/output/streamV2_tweetids_2023-06_splitted'
+    output_folder_path = '../data/output/streamV2_tweetids_2023-06'
 
     # Create output folder if it doesn't exist
     os.makedirs(output_folder_path, exist_ok=True)  
     process_all_files_in_folder(input_folder_path, output_folder_path)
     # process_file(input_file, output_folder_path)
-
+    logging.info('Done processing all files')
