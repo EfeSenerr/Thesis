@@ -151,13 +151,6 @@ def process_file(file_path, output_path):
     # Process each chunk in parallel
     process_data_in_parallel(df, output_path, data_name)
 
-# Processes all the files in the folder, calls process_file
-# def process_all_files_in_folder(folder_path, output_folder_path):
-#     for file_name in os.listdir(folder_path):
-#         if file_name.endswith('.txt'):
-#             file_path = os.path.join(folder_path, file_name)
-#             logging.info(f'Processing file: {file_name}')
-#             process_file(file_path, output_folder_path)
 
 def extract_number(filename):
     # Regular expression to match a sequence of digits
