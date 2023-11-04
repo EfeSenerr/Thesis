@@ -152,13 +152,17 @@ async def async_process_file(file_path, output_path):
     # Process each chunk in parallel
     await async_process_data_in_parallel(df, output_path, data_name)
 
-async def async_process_all_files_in_folder(folder_path, output_folder_path):
-    # Get all files in folder_path that end with .txt
+async def async_process_all_files_in_folder(folder_path, output_folder_path, start_from_file=0):
+   # Get all files in folder_path that end with .txt
     files = [f for f in os.listdir(folder_path) if f.endswith('.txt')]
     # Sort files based on the numeric part of the filename
     sorted_files = sorted(files, key=extract_number)
     
-    for file_name in sorted_files:
+    for index, file_name in enumerate(sorted_files, start=0):  # start enumeration from 0 for human-readable file numbers
+        # Skip files before the 14th file
+        if index < start_from_file:
+            continue
+        
         file_path = os.path.join(folder_path, file_name)
         logging.info(f'Processing file: {file_name}')
         await async_process_file(file_path, output_folder_path)
@@ -191,7 +195,7 @@ if __name__ == "__main__":
         
         # Run the asynchronous function until completion
         loop.run_until_complete(
-            async_process_all_files_in_folder(input_folder_path, output_folder_path)
+            async_process_all_files_in_folder(input_folder_path, output_folder_path, start_from_file=0)
         )
     finally:
         # Close the event loop
