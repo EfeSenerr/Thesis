@@ -158,4 +158,4 @@ if __name__ == "__main__":
     # Create output folder if it doesn't exist
     os.makedirs(output_folder_path, exist_ok=True)  
     process_all_files_in_folder(input_folder_path, output_folder_path)
-    
+    logging.info('Done processing all files')
