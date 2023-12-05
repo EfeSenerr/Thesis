@@ -96,27 +96,27 @@ def custom_write_csv(df: pd.DataFrame, output_path: str, data_name: str):
         logging.error(f'Failed to write chunk {e}')
         
 # Processes a chunk of data. The function is used in process_data_in_parallel, which chunks the given df into 10 chunks
-def process_chunk(df_chunk: pd.DataFrame, output_path: str, data_name: str):
+def process_chunk(missing_tweet_ids, output_path: str, data_name: str):
     results = []
-
-    for idx, row in df_chunk.iterrows():
-        row_dict = row.to_dict()
+    
+    for tweet_id in missing_tweet_ids:
         try:
-            api_response = fetch_additional_info(row_dict['tweet_id'])
+            api_response = fetch_additional_info(tweet_id)
             additional_info = parse_api_response(api_response)
-            row_dict.update(additional_info)
+            result_row = {'tweet_id': tweet_id}
+            result_row.update(additional_info)
         except Exception as e: 
-            logging.error(f'Failed to process chunk {e}')
+            logging.error(f'Failed to process tweet_id {tweet_id}: {e}')
 
-        results.append(row_dict)
+        results.append(result_row)
     
     result_df = pd.DataFrame(results)
     custom_write_csv(result_df, output_path, data_name)  # Pass output_path and data_name to custom_write_csv
 
 # Used for parallel processing, main function here is process_chunk
-def process_data_in_parallel(df, output_path: str, data_name: str):
+def process_data_in_parallel(missing_tweet_ids, output_path: str, data_name: str):
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        chunks = np.array_split(df, 10)
+        chunks = np.array_split(missing_tweet_ids, 10)
         # Use a lambda function to pass the output_path and data_name arguments to process_chunk
         executor.map(lambda chunk: process_chunk(chunk, output_path, data_name), chunks)
 
@@ -124,31 +124,29 @@ def process_data_in_parallel(df, output_path: str, data_name: str):
 def process_file(file_path, output_path):
     logging.info(f'Processing file path: {file_path}')
     # Extract data_name from the file path
-    data_name = os.path.basename(file_path).replace('.txt', '')
+    data_name = os.path.basename(file_path).replace('.csv', '')
     
-    # Read txt file and convert it to DataFrame
-    with open(file_path, 'r') as file:
-        tweet_ids = [int(line.strip()) for line in file]
-    df = pd.DataFrame(tweet_ids, columns=['tweet_id'])
+    # Get only the missing tweet IDs
+    missing_tweet_ids = get_missing_tweet_ids_from_file(file_path)
     # Create the output directory if it doesn't exist
     os.makedirs(output_path, exist_ok=True)
-    
+    # Process each chunk in parallel
+
     # Write the header to the output file
     output_file = os.path.join(output_path, f'output_{data_name}.csv')
     header_df = pd.DataFrame(columns=['tweet_id', 'tweet_type', 'hashtags', 'mentions', 'lang', 'favorite_count', 'created_at', 'text', 'parent_tweet_id'])
     header_df.to_csv(output_file, index=False)
-    
-    # Process each chunk in parallel
-    process_data_in_parallel(df, output_path, data_name)
+
+    process_data_in_parallel(missing_tweet_ids, output_path, data_name)
 
 def extract_number(filename):
     # Regular expression to match a sequence of digits
-    match = re.search(r'_(\d+)\.txt$', filename)
+    match = re.search(r'_(\d+)\.csv$', filename)
     return int(match.group(1)) if match else 0
 
 def process_all_files_in_folder(folder_path, output_folder_path, start_from_file=0):
     # Get all files in folder_path that end with .txt
-    files = [f for f in os.listdir(folder_path) if f.endswith('.txt')]
+    files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
     # Sort files based on the numeric part of the filename
     sorted_files = sorted(files, key=extract_number)
     
@@ -161,6 +159,21 @@ def process_all_files_in_folder(folder_path, output_folder_path, start_from_file
         logging.info(f'Processing file: {file_name}')
         process_file(file_path, output_folder_path)
 
+def get_missing_tweet_ids_from_file(file_path):
+    try:
+        df = pd.read_csv(file_path, dtype={'tweet_id': 'Int64'}, usecols=['tweet_id', 'text', 'tweet_type'])
+        # Filter out rows with empty 'text' or other critical fields
+        missing_tweets = df[df['text'].isna() & df['tweet_id'].notna()]['tweet_id']
+        return missing_tweets.to_list()
+    except FileNotFoundError:
+        logging.error(f"File not found: {file_path}")
+    except pd.errors.EmptyDataError:
+        logging.warning(f"No data in file: {file_path}")
+    except Exception as e:
+        logging.error(f"Error processing file {file_path}: {e}")
+
+    return []
+
 if __name__ == "__main__":
     warnings.filterwarnings(action='ignore', category=FutureWarning)
     
@@ -169,13 +182,13 @@ if __name__ == "__main__":
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(filename='processing.log'),
+            logging.FileHandler(filename='processing_missing_tweets.log'),
             logging.StreamHandler()
         ]
     )
     
-    input_folder_path = '../data/stream_tweetids_2022-07'
-    output_folder_path = '../data/output/stream_tweetids_2022-07_splitted'
+    input_folder_path = '/home/esener/thesis/Thesis/data/output/stream_tweetids_2022-07_splitted'
+    output_folder_path = '../data/output/missing_tweets/2_stream_tweetids_2022-07_splitted'
 
     # Create output folder if it doesn't exist
     os.makedirs(output_folder_path, exist_ok=True)  
