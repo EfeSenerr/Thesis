@@ -9,105 +9,65 @@ import numpy as np
 import concurrent.futures
 import os
 import re
-
-# Define the transformation function
-def extract_fields(json_obj):
-    tweet_id = json_obj.get('tweet_id', '')
-    tweet_type = json_obj.get('tweet_type', '')
-    hashtags = json_obj.get('hashtags', [])
-    mentions = json_obj.get('mentions', [])
-    return {
-        'tweet_id': tweet_id,
-        'tweet_type': tweet_type,
-        'hashtags': hashtags,
-        'mentions': mentions
-    }
+from tweety import Twitter
+import datetime
+import time
 
 # API call
-def fetch_additional_info(tweet_id):
-    url = "https://cdn.syndication.twimg.com/tweet-result"
-    querystring = {"id": tweet_id, "lang": "en", "token": "x"}
-    payload = ""
-    headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0",
-    "Accept": "*/*",
-    "Accept-Language": "en-US,en;q=0.5",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Origin": "https://platform.twitter.com",
-    "Connection": "keep-alive",
-    "Referer": "https://platform.twitter.com/",
-    "Sec-Fetch-Dest": "empty",
-    "Sec-Fetch-Mode": "cors",
-    "Sec-Fetch-Site": "cross-site",
-    "Pragma": "no-cache",
-    "Cache-Control": "no-cache",
-    "TE": "trailers"
-    }
+def fetch_additional_info(app, tweet_id):
     try:
-        response = requests.request("GET", url, data=payload, headers=headers, params=querystring)
-        if response.status_code != 200:
-            logging.error(f"Failed to fetch additional info for tweet_id {tweet_id}: {response.status_code}")
-            return None
+        tweet = app.tweet_detail(f"https://twitter.com/dbdevletbahceli/status/{tweet_id}")
     except Exception as e:
-        logging.error(f'Failed to fetch additional info for tweet_id {tweet_id}')
+        # logging.error(f"An error occurred scraping {tweet_id}: {e}")
         return None
-    return response.text
 
-def fetch_additional_info_fxt(tweet_id):
-    url = f"https://api.fxtwitter.com/status/{tweet_id}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/114.0",
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Pragma": "no-cache",
-        "Cache-Control": "no-cache",
-    }
-    try:
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            logging.error(f"Failed to fetch additional info for tweet_id {tweet_id}: {response.status_code}")
-            return None
-    except Exception as e:
-        logging.error(f'Failed to fetch additional info for tweet_id {tweet_id}: {e}')
-        return None
-    return response.text
+    return tweet
 
 # Extract the additional info from API response
-def parse_api_response(api_response):
-    if not api_response:
-        return {}
-    try:
-        parsed_data = json.loads(api_response)
-    except json.JSONDecodeError:
-        logging.error(f'Failed: parse_api_response. Error.')
-        return {}
+def parse_api_response(tweet):
+    if tweet is None:
+        return {
+        'tweet_id': '',
+        'tweet_type': "deleted",
+        'hashtags': [],
+        'mentions': [],
+        'lang': '',
+        'favorite_count': 0,
+        'created_at': '',
+        'text': '',
+        'parent_tweet_id': '',         
+    }
     
-    lang = parsed_data.get('lang', '')
-    favorite_count = parsed_data.get('favorite_count', 0)
-    created_at = parsed_data.get('created_at', '')
-    text = parsed_data.get('text', '')
-    parent_tweet_id = parsed_data.get('parent', {}).get('id_str', '')
+    # Extracting data directly from the tweet object
+    lang = getattr(tweet, 'language', '')
+    favorite_count = getattr(tweet, 'likes', 0)  # Assuming favorite_count is a property
+    
+    created_at = getattr(tweet, 'created_on', '')
+    if isinstance(created_at, datetime.datetime):
+        created_at = created_at.strftime('%Y-%m-%d %H:%M:%S %Z')    
+    
+    text = getattr(tweet, 'text', '')
+    tweet_id = getattr(tweet, 'id', '')
 
     # New:
-    hashtags = parsed_data.get('entities', {}).get('hashtags', '')
-    mentions = parsed_data.get('user_mentions', {}).get('user_mentions', '')
-    tweet_type = parsed_data.get('__typename', '')
-    tweet_id = parsed_data.get('id_str', '')
+    # Assuming hashtags are stored in a list of hashtag objects within the tweet object
+    hashtags = [hashtag["text"] for hashtag in getattr(tweet, 'hashtags', [])]    
+    mentions = getattr(tweet, 'user_mentions', [])
+    mentions_data = [{'id': getattr(user, 'id', ''), 'name': getattr(user, 'name', '')} for user in mentions]    
+    parent_tweet_id = getattr(tweet, 'replied_to', '')
+    # tweet_type = parsed_data.get('__typename', '')
 
     return {
         'tweet_id': tweet_id,
-        'tweet_type': tweet_type,
+        'tweet_type': "Tweet",
         'hashtags': hashtags,
-        'mentions': mentions,
+        'mentions': mentions_data,
         'lang': lang,
         'favorite_count': favorite_count,
         'created_at': created_at,
         'text': text,
         'parent_tweet_id': parent_tweet_id,         
     }
-
 # Last function in the process, which converts dataframe to csv file
 def custom_write_csv(df: pd.DataFrame, output_path: str, data_name: str):
     file_name = os.path.join(output_path, f'output_{data_name}.csv')
@@ -118,38 +78,31 @@ def custom_write_csv(df: pd.DataFrame, output_path: str, data_name: str):
         
 
 # Processes a chunk of data. The function is used in process_data_in_parallel, which chunks the given df into 10 chunks
-def process_chunk(df_chunk: pd.DataFrame, output_path: str, data_name: str):
+def process_chunk(app, df_chunk: pd.DataFrame, output_path: str, data_name: str):
     results = []
 
     for idx, row in df_chunk.iterrows():
         row_dict = row.to_dict()
         try:
-            api_response = fetch_additional_info(row_dict['tweet_id'])
+            api_response = fetch_additional_info(app, row_dict['tweet_id'])
             additional_info = parse_api_response(api_response)
             row_dict.update(additional_info)
+            time.sleep(0.1)
         except Exception as e: 
             logging.error(f'Failed to process chunk {e}')
 
-        # Convert hashtags and mentions array to a comma-separated string
-        #row_dict['hashtags'] = ','.join(row_dict['hashtags']) if isinstance(row_dict['hashtags'], (list, tuple)) else ''
-        #row_dict['mentions'] = ','.join(row_dict['mentions']) if isinstance(row_dict['mentions'], (list, tuple)) else ''
         results.append(row_dict)
-        #print(f"results inside: {results}")
-    #print(f"Results after everything: {results}")
-    result_df = pd.DataFrame(results)
-    #print(f"Result_df: {result_df}")
-    
-    # Filter the DataFrame to only include the columns specified in the schema
-    #result_df = result_df[['tweet_id', 'tweet_type', 'hashtags', 'mentions', 'lang', 'favorite_count', 'created_at', 'text', 'parent_tweet_id', 'entities']]
-    
+    result_df = pd.DataFrame(results)        
     custom_write_csv(result_df, output_path, data_name)  # Pass output_path and data_name to custom_write_csv
 
 # Used for parallel processing, main function here is process_chunk
 def process_data_in_parallel(df, output_path: str, data_name: str):
+    app = Twitter("session")
     with concurrent.futures.ThreadPoolExecutor() as executor:
         chunks = np.array_split(df, 10)
         # Use a lambda function to pass the output_path and data_name arguments to process_chunk
-        executor.map(lambda chunk: process_chunk(chunk, output_path, data_name), chunks)
+        futures = [executor.submit(process_chunk, app, chunk, output_path, data_name) for chunk in chunks]
+        concurrent.futures.wait(futures)
 
 # processes a file, which is written for .txt, calls process_data_in_parallel
 def process_file(file_path, output_path):
@@ -201,13 +154,13 @@ if __name__ == "__main__":
         level=logging.INFO,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler(filename='processing.log'),
+            logging.FileHandler(filename='processing_test.log'),
             logging.StreamHandler()
         ]
     )
     
-    input_folder_path = '../data/tracking_tweetids_2023-03'
-    output_folder_path = '../data/output/tracking_tweetids_2023-03_splitted'
+    input_folder_path = '/home/esener/thesis/Thesis/data/testFolder'
+    output_folder_path = '../../data/output/testFolder'
 
     # Create output folder if it doesn't exist
     os.makedirs(output_folder_path, exist_ok=True)  
