@@ -163,7 +163,7 @@ def get_missing_tweet_ids_from_file(file_path):
     try:
         df = pd.read_csv(file_path, dtype={'tweet_id': 'Int64'}, usecols=['tweet_id', 'text', 'tweet_type'])
         # Filter out rows with empty 'text' or other critical fields
-        missing_tweets = df[df['text'].isna() & df['tweet_id'].notna()]['tweet_id']
+        missing_tweets = df[df['text'].isna() & df['tweet_id'].notna() & df['tweet_type'].isna()]['tweet_id']
         return missing_tweets.to_list()
     except FileNotFoundError:
         logging.error(f"File not found: {file_path}")
