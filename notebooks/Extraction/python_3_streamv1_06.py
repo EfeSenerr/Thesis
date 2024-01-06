@@ -192,7 +192,7 @@ def get_missing_tweet_ids_from_file(file_path, second_batch_path):
     except Exception as e:
         logging.error(f"Error processing file {file_path}: {e}")
 
-    return [], []
+    return [], pd.DataFrame()
 
 
 if __name__ == "__main__":
