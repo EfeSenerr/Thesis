@@ -148,20 +148,25 @@ def extract_number(filename):
     match = re.search(r'_(\d+)\.csv$', filename)
     return int(match.group(1)) if match else 0
 
-def process_all_files_in_folder(folder_path, output_folder_path, start_from_file=0):
+def process_all_files_in_folder(first_batch_folder_path, output_folder_path, second_batch_folder_path, start_from_file=0):
     # Get all files in folder_path that end with .txt
-    files = [f for f in os.listdir(folder_path) if f.endswith('.csv')]
+    first_batch_files = [f for f in os.listdir(first_batch_folder_path) if f.endswith('.csv')]
     # Sort files based on the numeric part of the filename
-    sorted_files = sorted(files, key=extract_number)
+    sorted_first_batch_files = sorted(first_batch_files, key=extract_number)
     
-    for index, file_name in enumerate(sorted_files, start=0):  # start enumeration from 0 for human-readable file numbers
+    for index, file_name in enumerate(sorted_first_batch_files, start=0):  # start enumeration from 0 for human-readable file numbers
         # Skip files before the 14th file
         if index < start_from_file:
             continue
         
-        file_path = os.path.join(folder_path, file_name)
+        first_batch_file_path = os.path.join(first_batch_folder_path, file_name)
+        
+        # Adjusting the file name for the second batch
+        second_batch_file_name = file_name.replace("output_", "output_output_")
+        second_batch_file_path = os.path.join(second_batch_folder_path, second_batch_file_name)
+
         logging.info(f'Processing file: {file_name}')
-        process_file(file_path, output_folder_path)
+        process_file(first_batch_file_path, output_folder_path, second_batch_file_path)
 
 def get_missing_tweet_ids_from_file(file_path, second_batch_path):
     try:
@@ -203,11 +208,12 @@ if __name__ == "__main__":
         ]
     )
     
-    input_folder_path = '/home/esener/thesis/Thesis/data/output/streamV2_tweetnet_2023-04_splitted'
-    output_folder_path = '../data/output/missing_tweets/streamV2_tweetnet_2023-04_splitted'
+    first_batch_folder_path = '/home/esener/thesis/Thesis/data/output/streamV2_tweetids_2023-06_splitted'
+    second_batch_folder_path = '/home/esener/thesis/Thesis/data/missing_tweets/2_stream_tweetids_2023-06_splitted'
+    output_folder_path = '/home/esener/thesis/Thesis/data/output/missing_tweets_3/3-streamV2_tweetids_2023-06_splitted'
 
     # Create output folder if it doesn't exist
     os.makedirs(output_folder_path, exist_ok=True)  
-    process_all_files_in_folder(input_folder_path, output_folder_path, start_from_file=0)
+    process_all_files_in_folder(first_batch_folder_path, output_folder_path, second_batch_folder_path, start_from_file=0)
     # process_file(input_file, output_folder_path)
     logging.info('Done processing all files')
