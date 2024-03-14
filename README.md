@@ -6,7 +6,7 @@ To discover the key themes of the political discourse on Twitter, over 1000 topi
 
 This thesis provides insights into the correlation between real-life events and trending topics on Twitter, where the political discourse on Twitter and the coalition strategies,
 public speeches, and announcements are also compared and discussed. Furthermore, the thesis performs a comparative analysis by contrasting the results with other research
-analyzing different elections and political domains. 
+analyzing different elections and political domains.
 
 In conclusion, this thesis contributes to the academic environment by pioneering one of the first topic modeling analyses on Turkish political discourse utilizing big data,
 which sheds light on the May 2023 general elections and aims to better understand Turkish political discourse and motivate future research by presenting the methodologies
@@ -14,9 +14,11 @@ and findings.
 
 ## Repository Folder Structure
 
-.
-├── collection             # Files related to the collection of tweets
-├── analysis               # Files related to topic modeling
-├── src                    # Source files
-├── tools                  # Tools and utilities
-└── README.md
+    .
+    ├── analysis               # Files related to topic modeling and analysis
+    ├── collection             # Files related to the collection of tweets 
+    ├── src                    # Source files
+    │   ├── figures            # Visualizations used in the thesis
+    └── README.md
+
+The thesis latex repository can be found [under this link](https://github.com/EfeSenerr/Thesis_paper). One-sided and two-sided versions of the thesis can be found in this repository.
