@@ -18,7 +18,6 @@ and findings.
     ├── analysis               # Files related to topic modeling and analysis
     ├── collection             # Files related to the collection of tweets 
     ├── src                    # Source files
-    │   ├── figures            # Visualizations used in the thesis
-    └── README.md
+    └──  └── figures            # Visualizations used in the thesis
 
 The thesis latex repository can be found [under this link](https://github.com/EfeSenerr/Thesis_paper). One-sided and two-sided versions of the thesis can be found in this repository.
