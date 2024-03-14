@@ -21,7 +21,7 @@ and findings.
     │   ├── first_approach_base_model
     │   └── second_approach_base_model
     └── src                    # Source files
-        └── figures           # Visualizations used in the thesis
+        └── figures            # Visualizations used in the thesis
 
 Every subfolder has its own README file that explains the contents of the subfolder in detail.
 
