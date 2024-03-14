@@ -10,7 +10,7 @@ Explanation for individual files:
     - test for API call, collecting missing tweets
     - method for getting the sample tweet data for the topic modeling
     - methods for visualizations that have been used in the thesis and presentations
-- **requirements.txt**: all the required packages for hydrating the tweets
+- **requirements.txt**: all the required packages for hydrating the tweets.
 - **script_compare_methods.py**: The script has been used to compare the sync and async hydration pipelines.
 - **script_hydrate_asynch.py**: This script includes an async hydation process, which is not used in this thesis, since other approaches were found to be faster.
 - **script_hydrate_csv_second_batch.py**: This script has been used to collect the tweets in the second batch.
