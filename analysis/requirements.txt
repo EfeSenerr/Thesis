@@ -1,0 +1,14 @@
+notebook
+pandas
+numpy
+transformers
+openai
+bertopic @ git+https://github.com/MaartenGr/BERTopic.git@master
+--extra-index-url https://pypi.nvidia.com
+cudf-cu12 
+dask-cudf-cu12
+cuml-cu12
+cugraph-cu12
+cupy-cuda12x
+safetensors
+adjustText
