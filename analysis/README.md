@@ -4,5 +4,5 @@ This folder includes the Jupyter Notebook that has been used on Google Colab (Pr
 
 Explanation for individual files:
 
-- **analysis.ipynb**: The notebook is written in Python, and can be executed on Google Colab (Pro). The notebook includes the code, and the outputs. The notebook is well-documented, and it includes the necessary explanations for each step.
+- **script_analysis_googlecolab.ipynb**: The notebook is written in Python, and can be executed on Google Colab (Pro). The notebook includes the code, and the outputs. The notebook is well-documented, and it includes the necessary explanations for each step.
 - **requirements.txt**: all the required packages for the topic modeling and the analysis of the tweets.
